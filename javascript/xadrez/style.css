@@ -1,0 +1,58 @@
+body{
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    box-sizing:border-box ;
+    background-color: rgba(0, 0, 0, 0.844);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    color: white;
+}
+.container{
+    height: 500px;
+    width: 500px;
+    display: grid;
+    grid-template-columns: repeat(8,1fr) ;
+    grid-template-rows:  repeat(8,1fr);
+    border: 3px outset black;
+    resize: both;
+}
+.casa{
+    border: 1px solid rgba(0, 0, 0, 0.433);
+    background-color: rgb(190, 190, 151);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    }
+.casa.marked{
+    background-color:rgb(200, 198, 84)!important;
+    .piece-chess{
+    height: 50px;
+    filter:drop-shadow(5px 5px 5px black);
+    }
+}
+.linhaVerde:nth-child(even){
+    background-color: rgb(6, 85, 6);
+}
+.linhaBranca:nth-child(odd){
+    background-color: rgb(6, 85, 6);
+}
+.piece-chess{
+    height: 53px;
+    user-select: none;
+    filter:drop-shadow(5px 7px 6px black);
+
+}
+.casa:hover{
+    cursor:pointer;
+    }
+.horse1{
+    -webkit-transform: rotateY(180deg);
+    transform: rotateY(180deg);;
+}
+.pawn{
+    height: 45px;
+}
