@@ -1,126 +1,116 @@
-const CASAS = document.querySelectorAll('.casa');
-CASAS.forEach(casa => casa.addEventListener('click', selecionarCasa))
-const PIECES = {
-    'PAWN': document.getElementsByClassName('pawn'),
-    'HORSE': document.getElementsByClassName('horse'),
-    'BISHOP': document.getElementsByClassName('bishop'),
-    'TOWER': document.getElementsByClassName('tower'),
-    'QUEEN': document.getElementsByClassName('queen'),
-    'KING': document.getElementsByClassName('king'),
-};
-const ALLPIECES = ['pawn','horse','bishop','tower','queen','king'];
-let lock = false;
-let pieceMoving;
-let newPlace;
-let initialCoord = [];
-let finalCoord = [];
-let pieceType;
+const API_URL = "http://localhost:3000";
 
-function selecionarCasa(){
-    if(this.innerHTML) {
-        this.classList.toggle('marked') 
-        pieceMoving = this;
-        lock = true;
-    } else {
-       if(lock === true && !this.innerHTML) {
-        newPlace = this;
-        lock = false;
-        getCoordenates();
-       }
-    }
-    return;
- };
-function getCoordenates(){
-    let initialHouse = pieceMoving.id.split('-');
-    initialHouse.forEach(coord => initialCoord.push(+coord))
-    let newHouseCoord = newPlace.id.split('-');
-    newHouseCoord.forEach(coord => finalCoord.push(+coord));
-    checkPiece();
-}
+let gameId = null;
+let selectedSquare = null;
 
-function checkPiece(){
-    let piece = pieceMoving.innerHTML;
-    
-    for(let i = 0; i < ALLPIECES.length; i++){
-        piece.includes(ALLPIECES[i]) ? pieceType = ALLPIECES[i] : undefined;
-    }
-    console.log(pieceType);
-    checkMove();
-}
+// Criar jogo ao carregar
+window.onload = async () => {
+  const response = await fetch(`${API_URL}/games`, {
+    method: "POST",
+  });
 
-function checkMove(){
-    switch(pieceType){
-        case 'pawn':
-            
-            if(initialCoord[0] === finalCoord[0] && Math.abs(finalCoord[1]-initialCoord[1]) === 1){
-                checkPath();
-            } else {
-                clean();
-            }
-            break;
+  const game = await response.json();
+  gameId = game.id;
 
-        case 'bishop':
-            if(Math.abs(finalCoord[0]-initialCoord[0]) === Math.abs(finalCoord[1]-initialCoord[1])){
-                checkPath();
-            } else {
-                clean();
-            }
-            break;
-
-        case 'horse':
-            Math.abs(finalCoord[0]-initialCoord[0]) === 2 && Math.abs(finalCoord[1]-initialCoord[1]) === 1 ? checkPath() : undefined;
-            Math.abs(finalCoord[1]-initialCoord[1]) === 2 && Math.abs(finalCoord[0]-initialCoord[0]) === 1 ? checkPath() : clean();
-            break;
-
-        case 'tower':
-            if(initialCoord[0] === finalCoord[0] || finalCoord[1] === initialCoord[1]){
-                checkPath();
-            } else {
-                clean();
-            }
-            break;
-
-            case 'queen':
-            console.log(initialCoord,finalCoord);
-            (initialCoord[0] === finalCoord[0] || finalCoord[1] === initialCoord[1]) || (Math.abs(finalCoord[0]-initialCoord[0]) === Math.abs(finalCoord[1]-initialCoord[1])) ? checkPath() : clean();    
-            break;
-
-            case 'king':
-            Math.abs(finalCoord[0]-initialCoord[0]) <= 1 && Math.abs(finalCoord[1]-initialCoord[1]) <= 1 ? checkPath() : clean();
-            break;
-
-        default:
-            clean();
-            break;
-    }
-}
-
-let allCoord = [];
-function checkPath(){
-    let hasPiece = [];
-    let a = initialCoord[0];    
-    let b = initialCoord[1];
-    for(let i = initialCoord[0]; i < finalCoord[0]; i++){
-    allCoord.push([a++,b++]);
-    }
-    console.log(a,b);
-    allCoord.forEach(coord => hasPiece.push(coord.join("-")));
-    console.log(hasPiece)
-    movePiece();
-}
-
-function movePiece(){
-    newPlace.innerHTML = pieceMoving.innerHTML;
-    pieceMoving.innerHTML = "";
-    newPlace.classList.toggle('marked');
-    setTimeout(clean,500);
+  renderBoard(game.fen);
+  enableClicks();
 };
 
-function clean(){
-    pieceMoving.classList.remove('marked');
-    newPlace.classList.remove('marked');
-    finalCoord= [];
-    initialCoord = [];
-    pieceType = '';
+// Renderizar baseado no FEN
+function renderBoard(fen) {
+  // Limpar todas as casas
+  document.querySelectorAll(".casa").forEach((casa) => {
+    casa.innerHTML = "";
+  });
+
+  const rows = fen.split(" ")[0].split("/");
+
+  rows.forEach((row, rowIndex) => {
+    let colIndex = 0;
+
+    for (let char of row) {
+      if (!isNaN(char)) {
+        colIndex += parseInt(char);
+      } else {
+        const column = colIndex + 1;
+        const line = 8 - rowIndex;
+
+        const casa = document.getElementById(`${column}-${line}`);
+
+        const img = document.createElement("img");
+        img.src = getPieceImage(char);
+        img.classList.add("piece-chess");
+
+        casa.appendChild(img);
+
+        colIndex++;
+      }
+    }
+  });
+}
+
+// Mapear peças
+function getPieceImage(char) {
+  const pieces = {
+    r: "img/black-tower.png",
+    n: "img/black-horse.png",
+    b: "img/black-bishop.png",
+    q: "img/black-queen.png",
+    k: "img/black-king.png",
+    p: "img/black-pawn.png",
+    R: "img/white-tower.png",
+    N: "img/white-horse.png",
+    B: "img/white-bishop.png",
+    Q: "img/white-queen.png",
+    K: "img/white-king.png",
+    P: "img/white-pawn.png",
+  };
+
+  return pieces[char];
+}
+
+// Ativar clique nas casas
+function enableClicks() {
+  document.querySelectorAll(".casa").forEach((casa) => {
+    casa.addEventListener("click", async () => {
+      const id = casa.id; // exemplo: 5-2
+
+      const [col, row] = id.split("-");
+      const fromTo = `${String.fromCharCode(96 + parseInt(col))}${row}`;
+
+      if (!selectedSquare) {
+        selectedSquare = fromTo;
+        casa.classList.add("marked");
+        return;
+      }
+
+      await sendMove(selectedSquare, fromTo);
+
+      document
+        .querySelectorAll(".casa")
+        .forEach((c) => c.classList.remove("marked"));
+
+      selectedSquare = null;
+    });
+  });
+}
+
+// Enviar jogada
+async function sendMove(from, to) {
+  const response = await fetch(`${API_URL}/games/${gameId}/move`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from, to }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    alert("Movimento inválido");
     return;
-    };
+  }
+
+  renderBoard(data.fen);
+}
