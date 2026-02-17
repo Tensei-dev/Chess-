@@ -1,0 +1,17 @@
+{
+  "name": "chess-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
+    "pg": "^8.18.0",
+    "uuid": "^9.0.1"
+  }
+}
