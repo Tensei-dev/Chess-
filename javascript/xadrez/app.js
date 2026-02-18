@@ -1,126 +1,290 @@
-const CASAS = document.querySelectorAll('.casa');
-CASAS.forEach(casa => casa.addEventListener('click', selecionarCasa))
-const PIECES = {
-    'PAWN': document.getElementsByClassName('pawn'),
-    'HORSE': document.getElementsByClassName('horse'),
-    'BISHOP': document.getElementsByClassName('bishop'),
-    'TOWER': document.getElementsByClassName('tower'),
-    'QUEEN': document.getElementsByClassName('queen'),
-    'KING': document.getElementsByClassName('king'),
-};
-const ALLPIECES = ['pawn','horse','bishop','tower','queen','king'];
-let lock = false;
-let pieceMoving;
-let newPlace;
-let initialCoord = [];
-let finalCoord = [];
-let pieceType;
+/*
+ FRONTEND CHESS CLIENT
 
-function selecionarCasa(){
-    if(this.innerHTML) {
-        this.classList.toggle('marked') 
-        pieceMoving = this;
-        lock = true;
-    } else {
-       if(lock === true && !this.innerHTML) {
-        newPlace = this;
-        lock = false;
-        getCoordenates();
-       }
-    }
-    return;
- };
-function getCoordenates(){
-    let initialHouse = pieceMoving.id.split('-');
-    initialHouse.forEach(coord => initialCoord.push(+coord))
-    let newHouseCoord = newPlace.id.split('-');
-    newHouseCoord.forEach(coord => finalCoord.push(+coord));
-    checkPiece();
-}
+ Connects UI to backend chess.js engine
 
-function checkPiece(){
-    let piece = pieceMoving.innerHTML;
-    
-    for(let i = 0; i < ALLPIECES.length; i++){
-        piece.includes(ALLPIECES[i]) ? pieceType = ALLPIECES[i] : undefined;
-    }
-    console.log(pieceType);
-    checkMove();
-}
+ Human move → backend validates → returns FEN
+ Robot move → backend validates → returns FEN
 
-function checkMove(){
-    switch(pieceType){
-        case 'pawn':
-            
-            if(initialCoord[0] === finalCoord[0] && Math.abs(finalCoord[1]-initialCoord[1]) === 1){
-                checkPath();
-            } else {
-                clean();
-            }
-            break;
+ UI always renders from FEN
 
-        case 'bishop':
-            if(Math.abs(finalCoord[0]-initialCoord[0]) === Math.abs(finalCoord[1]-initialCoord[1])){
-                checkPath();
-            } else {
-                clean();
-            }
-            break;
+**/
 
-        case 'horse':
-            Math.abs(finalCoord[0]-initialCoord[0]) === 2 && Math.abs(finalCoord[1]-initialCoord[1]) === 1 ? checkPath() : undefined;
-            Math.abs(finalCoord[1]-initialCoord[1]) === 2 && Math.abs(finalCoord[0]-initialCoord[0]) === 1 ? checkPath() : clean();
-            break;
+/*
+ CONFIGURATION
+**/
 
-        case 'tower':
-            if(initialCoord[0] === finalCoord[0] || finalCoord[1] === initialCoord[1]){
-                checkPath();
-            } else {
-                clean();
-            }
-            break;
+const API_URL = "http://localhost:3000/game";
 
-            case 'queen':
-            console.log(initialCoord,finalCoord);
-            (initialCoord[0] === finalCoord[0] || finalCoord[1] === initialCoord[1]) || (Math.abs(finalCoord[0]-initialCoord[0]) === Math.abs(finalCoord[1]-initialCoord[1])) ? checkPath() : clean();    
-            break;
+let gameId = null;
 
-            case 'king':
-            Math.abs(finalCoord[0]-initialCoord[0]) <= 1 && Math.abs(finalCoord[1]-initialCoord[1]) <= 1 ? checkPath() : clean();
-            break;
+let selectedSquare = null;
 
-        default:
-            clean();
-            break;
-    }
-}
+/*
+ INITIALIZE GAME
+**/
+let CASAS = [];
 
-let allCoord = [];
-function checkPath(){
-    let hasPiece = [];
-    let a = initialCoord[0];    
-    let b = initialCoord[1];
-    for(let i = initialCoord[0]; i < finalCoord[0]; i++){
-    allCoord.push([a++,b++]);
-    }
-    console.log(a,b);
-    allCoord.forEach(coord => hasPiece.push(coord.join("-")));
-    console.log(hasPiece)
-    movePiece();
-}
+window.onload = async () => {
 
-function movePiece(){
-    newPlace.innerHTML = pieceMoving.innerHTML;
-    pieceMoving.innerHTML = "";
-    newPlace.classList.toggle('marked');
-    setTimeout(clean,500);
+  CASAS = document.querySelectorAll(".casa");
+
+  CASAS.forEach(square => {
+    square.addEventListener("click", onSquareClick);
+  });
+
+  const res = await fetch(API_URL,{method:"POST"});
+
+  const game = await res.json();
+
+    console.log("GAME:", game);
+    console.log("FEN:", game.fen);
+  gameId = game.id;
+
+  renderBoardFromFEN(game.fen);
+
 };
 
-function clean(){
-    pieceMoving.classList.remove('marked');
-    newPlace.classList.remove('marked');
-    finalCoord= [];
-    initialCoord = [];
-    pieceType = '';
+
+/**
+ HANDLE HUMAN CLICK
+**/
+
+async function onSquareClick(){
+
+  const clickedSquare = this.id;
+
+
+  /***
+   SELECT PIECE
+    ***/
+
+  if(selectedSquare === null){
+
+    const hasPiece =
+      this.querySelector("img");
+
+    if(!hasPiece)
+      return;
+
+    selectedSquare = clickedSquare;
+
+    this.classList.add("marked");
+
     return;
-    };
+
+  }
+
+
+
+  /***
+   MOVE PIECE
+  ***/
+
+  const from = convertToChess(selectedSquare);
+
+  const to = convertToChess(clickedSquare);
+  document
+    .getElementById(selectedSquare)
+    .classList.remove("marked");
+
+
+  selectedSquare = null;
+  const moveResult =
+    await sendMove(from,to);
+
+
+  if(!moveResult){
+
+    console.log("invalid");
+
+    return;
+  }
+
+  renderBoardFromFEN(moveResult.fen);
+  checkGameStatus(moveResult);
+
+  if(moveResult.status === "ONGOING")
+
+    await robotMove();
+
+}
+
+/*
+ SEND MOVE TO BACKEND
+**/
+
+async function sendMove(from,to){
+
+  const res = await fetch(`${API_URL}/${gameId}/move`,{
+
+    method:"POST",
+
+    headers:{
+
+      "Content-Type":"application/json"
+
+    },
+
+    body: JSON.stringify({
+
+      from,
+
+      to,
+
+      promotion:"q"
+
+    })
+
+  });
+
+
+  if(res.status !== 200){
+
+    console.log("Illegal move");
+
+    return null;
+
+  }
+
+
+  return await res.json();
+
+}
+
+
+
+/*
+ ROBOT MOVE
+ Robot move comes from backend using same endpoint
+*/
+
+async function robotMove(){
+
+
+  const res = await fetch(`${API_URL}/${gameId}`);
+
+
+  const game = await res.json();
+
+
+  if(game.status !== "ONGOING") return;
+
+
+  // Ask backend to make robot move
+  const robot = await fetch(`${API_URL}/${gameId}/robot`,{
+
+    method:"POST"
+
+  });
+
+
+  const moveResult = await robot.json();
+
+  renderBoardFromFEN(moveResult.fen);
+
+  checkGameStatus(moveResult);
+}
+
+
+
+/*
+ RENDER BOARD FROM FEN
+ This ensures frontend always reflects backend state
+*/
+
+function renderBoardFromFEN(fen){
+
+  clearBoard();
+
+  const rows = fen.split(" ")[0].split("/");
+
+  for(let y=0;y<8;y++){
+
+    let x=0;
+
+    for(const char of rows[y]){
+
+      if(isNaN(char)){
+
+        const id = `${x+1}-${8-y}`;
+        placePiece(id,char);
+        x++;
+
+      }
+
+      else{
+        x += Number(char);
+      }
+
+    }
+
+  }
+
+}
+
+/*
+ PLACE PIECE IMAGE
+*/
+
+function placePiece(id,char){
+
+  const square = document.getElementById(id);
+  const img = document.createElement("img");
+  const color = char === char.toUpperCase()
+    ? "white"
+    : "black";
+
+  const type = getPieceType(char.toLowerCase());
+  img.src = `./img/${color}-${type}.png`;
+  img.classList.add("piece-chess");
+  square.appendChild(img);
+
+}
+
+/*
+ CLEAR BOARD
+*/
+
+function clearBoard(){
+
+  CASAS.forEach(square=>{
+    square.innerHTML="";
+  });
+
+}
+
+/*
+ CHECK STATUS
+*/
+function checkGameStatus(game){
+
+  if(game.status === "FINISHED")
+    alert("CHECKMATE");
+
+  if(game.status === "DRAW")
+    alert("DRAW");
+}
+
+/*
+ CONVERSION FUNCTIONS
+*/
+function convertToChess(id){
+
+  const [x,y] = id.split("-");
+  const file = String.fromCharCode(96 + Number(x));
+  return file+y;
+}
+
+function getPieceType(letter){
+
+  switch(letter){
+    case "p": return "pawn";
+    case "r": return "tower";
+    case "n": return "horse";
+    case "b": return "bishop";
+    case "q": return "queen";
+    case "k": return "king";
+  }
+
+}

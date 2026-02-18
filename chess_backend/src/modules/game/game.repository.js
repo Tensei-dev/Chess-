@@ -2,6 +2,7 @@ import pool from "../../config/db.js";
 
 // Criar novo jogo
 export const createGame = async (fen) => {
+  console.log(process.env.DB_PASSWORD);
   const result = await pool.query(
     `
     INSERT INTO games (fen, status, current_turn)

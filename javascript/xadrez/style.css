@@ -29,10 +29,10 @@ body{
     }
 .casa.marked{
     background-color:rgb(200, 198, 84)!important;
-    .piece-chess{
+}
+.casa.marked .piece-chess{
     height: 50px;
     filter:drop-shadow(5px 5px 5px black);
-    }
 }
 .linhaVerde:nth-child(even){
     background-color: rgb(6, 85, 6);
