@@ -6,7 +6,7 @@ Web-based multiplayer chess game with an AI opponent. Built with React and Node.
 - postgreSQL
 
 PACKAGES (npm)
-Chess-\chess_backend
+- Chess-\chess_backend
 ├── chess.js@1.4.0
 ├── cors@2.8.6
 ├── dotenv@16.6.1
