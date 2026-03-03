@@ -1,5 +1,5 @@
 # Chess-
-Web-based multiplayer chess game with an Robot🤖 opponent. Built with HTML, CSS, Javascript and Node.js, using DOM manipulation and Chess.Js API for real-time play and PostgreSQL for data storage. 
+Web-based multiplayer chess game with a Robot🤖 opponent. Built with HTML, CSS, Javascript and Node.js, using DOM manipulation and Chess.Js API for real-time play and PostgreSQL for data storage. 
 
 ## REQUIRED INSTALLATIONS
 - npm (node package manager)
