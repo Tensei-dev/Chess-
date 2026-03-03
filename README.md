@@ -1,5 +1,5 @@
 # Chess-
-Web-based multiplayer chess game with an AI opponent. Built with React and Node.js, using WebSockets for real-time play and PostgreSQL for data storage. The AI runs as a Python microservice using tree-based models (CatBoost/LightGBM) combined with search algorithms.
+Web-based multiplayer chess game with an Robot🤖 opponent. Built with HTML, CSS, Javascript and Node.js, using DOM manipulation and Chess.Js API for real-time play and PostgreSQL for data storage. 
 
 ## REQUIRED INSTALLATIONS
 - npm (node package manager)
